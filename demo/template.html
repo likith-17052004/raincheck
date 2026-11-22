@@ -1,0 +1,175 @@
+<title>ForecastTrust AI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow reading column; metrics table on top, then a per-day explorer, then threshold and calibration. */
+:root{--bg:#f6f8f9;--panel:#ffffff;--fg:#14232b;--mute:#5d707a;--line:#dbe3e7;--rain:#1f6f9f;--obs:#14232b;--bad:#c2410c;--ok:#2f7d5b;--soft:#e8f1f6;
+--fh:'Space Grotesk',system-ui,sans-serif;--fb:'Inter',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a20;--panel:#16252d;--fg:#e6eef2;--mute:#92a6b0;--line:#27404c;--rain:#5fb0e0;--obs:#e6eef2;--bad:#f08a55;--ok:#5cc596;--soft:#1c3340;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1a20;--panel:#16252d;--fg:#e6eef2;--mute:#92a6b0;--line:#27404c;--rain:#5fb0e0;--obs:#e6eef2;--bad:#f08a55;--ok:#5cc596;--soft:#1c3340;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--fb);padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2{font-family:var(--fh);text-wrap:balance;margin:0}
+h1{font-size:34px;line-height:1.1}
+h2{font-size:20px;margin-bottom:6px}
+p{margin:0;max-width:65ch}
+.mute{color:var(--mute)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;min-width:0}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600}
+tr.us td{font-weight:600;background:var(--soft)}
+.controls{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+select,input[type=range]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=range]{padding:0;accent-color:var(--rain)}
+.grid{display:grid;grid-template-columns:1fr 200px;gap:18px;align-items:start}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.risk{display:flex;flex-direction:column;gap:6px}
+.big{font:700 44px/1 var(--fh);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid currentColor;width:max-content}
+.pill.bad{color:var(--bad)}.pill.ok{color:var(--ok)}
+button{font:inherit;font-weight:600;color:var(--bg);background:var(--rain);border:0;border-radius:6px;padding:8px 12px;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--rain);outline-offset:2px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--mute);font:11px var(--fb)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:6px}
+.sw{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:12px}
+.stat b{display:block;font:700 26px/1.1 var(--fh);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--mute)}
+small{color:var(--mute)}
+</style>
+
+<main>
+<header>
+<h1>ForecastTrust AI</h1>
+<p class="mute" style="margin-top:10px">Will tomorrow's rainfall forecast fail? The model reads the forecast and the recent record of rain that has been verified, and flags days when the day-ahead ECMWF forecast is likely to miss by more than max(5 mm, 50% of the forecast). It answers before the rain falls.</p>
+</header>
+
+<section class="panel">
+<h2>Test results</h2>
+<p class="mute">2,016 city-days from June to November 2025, 12 Indian cities. The model never saw these dates in training. 23.2% of them were failures.</p>
+<div class="tablewrap" style="margin-top:10px"><table>
+<tr><th>Model</th><th>AUROC</th><th>Avg precision</th><th>Brier</th></tr>
+<tr><td>Always predict the base rate</td><td>0.500</td><td>0.232</td><td>0.185</td></tr>
+<tr><td>Forecast amount only (logistic)</td><td>0.785</td><td>0.421</td><td>0.205</td></tr>
+<tr><td>XGBoost with error history</td><td>0.809</td><td>0.488</td><td>0.142</td></tr>
+<tr class="us"><td>OpenTSLM, Qwen2.5-0.5B + LoRA (3 seeds)</td><td>0.810 to 0.816</td><td>0.477 to 0.488</td><td>0.140 to 0.154</td></tr>
+</table></div>
+<p class="mute" style="margin-top:10px"><small>The temporal language model matches the best classical baseline. It does not beat it. Removing the observed history did not hurt (0.815), so most of the signal comes from the forecasts themselves. Everything below uses the average of the three seeds.</small></p>
+</section>
+
+<section class="panel">
+<h2>Look at one day</h2>
+<p class="mute">Pick a city and a day from the test period. The chart shows only what was known when the day-1 forecast was issued.</p>
+<div class="controls">
+<label>City<select id="city"></select></label>
+<label style="flex:1;min-width:200px">Day <span id="dlabel" style="text-transform:none;letter-spacing:0;color:var(--fg)"></span><input type="range" id="day" min="0" max="0" value="0"></label>
+</div>
+<div class="grid">
+<div><svg id="chart" viewBox="0 0 560 240" role="img" aria-label="Forecast and verified rainfall for the 14 days ending on the chosen day"></svg>
+<div class="legend"><span><i class="sw" style="background:var(--rain)"></i>Day-1 forecast (mm)</span><span><i class="sw" style="background:var(--obs)"></i>Verified rain, known to day D-2 (mm)</span></div></div>
+<div class="risk">
+<span class="mute" style="font-size:12px;text-transform:uppercase;letter-spacing:.06em">Failure risk</span>
+<div class="big" id="prob"></div>
+<span class="pill" id="flag"></span>
+<span class="mute" id="why" style="font-size:13px"></span>
+<button id="reveal" type="button">Show what happened</button>
+<span id="outcome" style="font-weight:600"></span>
+</div>
+</div>
+</section>
+
+<section class="panel">
+<h2>Choose how cautious to be</h2>
+<p class="mute">Flag a day as risky when the predicted failure risk is at or above the threshold.</p>
+<div class="controls"><label style="flex:1;min-width:220px">Threshold <span id="tlabel" style="text-transform:none;letter-spacing:0;color:var(--fg)"></span><input type="range" id="thr" min="5" max="90" value="40"></label></div>
+<div class="stats" id="stats"></div>
+<svg id="calib" viewBox="0 0 560 220" role="img" aria-label="Observed failure rate by predicted risk" style="margin-top:16px"></svg>
+<p class="mute"><small>Each bar is the share of days that really failed among days with that predicted risk. Bars that follow the diagonal mean the probabilities can be trusted at face value.</small></p>
+</section>
+
+<footer class="mute"><small>Data: ECMWF IFS day-1 to day-3 forecasts from Open-Meteo Previous Runs; verification is ERA5 reanalysis, not rain gauges (Open-Meteo, CC BY 4.0). Packaged as the TimeNet dataset forecasttrust/india-rainfall-reliability v1.0.0. Predictions are real outputs of the fine-tuned models on the held-out test split. Research demo, not an operational warning service.</small></footer>
+</main>
+
+<script>
+const DATA = __DATA__;
+const $ = id => document.getElementById(id);
+const cities = [...new Set(DATA.map(r => r.c))].sort();
+const byCity = Object.fromEntries(cities.map(c => [c, DATA.filter(r => r.c === c).sort((a, b) => a.d < b.d ? -1 : 1)]));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = 'http://www.w3.org/2000/svg';
+function el(t, a, p) { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+const fmtDate = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'});
+let cur = null, shown = false;
+
+cities.forEach(c => { const o = document.createElement('option'); o.textContent = c; $('city').appendChild(o); });
+$('city').value = 'Mumbai' in byCity ? 'Mumbai' : cities[0];
+
+function pickCity() {
+  const rows = byCity[$('city').value];
+  $('day').max = rows.length - 1;
+  // start on the day with the highest predicted risk so the first view shows the model doing something
+  let best = 0; rows.forEach((r, i) => { if (r.p > rows[best].p) best = i; });
+  $('day').value = best;
+  draw();
+}
+
+function draw() {
+  const rows = byCity[$('city').value]; cur = rows[+$('day').value]; shown = false;
+  $('dlabel').textContent = fmtDate(cur.d);
+  $('prob').textContent = Math.round(cur.p * 100) + '%';
+  const risky = cur.p >= 0.4;
+  $('flag').textContent = risky ? 'Likely to fail' : 'Likely to hold'; $('flag').className = 'pill ' + (risky ? 'bad' : 'ok');
+  $('why').textContent = 'Day-1 forecast ' + cur.f1 + ' mm; day-2 run said ' + cur.f2 + ' mm, day-3 run ' + cur.f3 + ' mm.';
+  $('outcome').textContent = ''; $('outcome').style.color = '';
+  const svg = $('chart'); svg.replaceChildren();
+  const W = 560, H = 240, L = 34, R = 8, T = 10, B = 28, n = 14;
+  const fc = [...cur.h, cur.f1];
+  const max = Math.max(5, ...fc, ...cur.o) * 1.1;
+  const y = v => T + (H - T - B) * (1 - v / max), bw = (W - L - R) / n;
+  for (let i = 0; i <= 4; i++) { const v = max * i / 4; el('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: css('--line')}, svg); el('text', {x: L - 4, y: y(v) + 4, 'text-anchor': 'end'}, svg).textContent = Math.round(v); }
+  fc.forEach((v, i) => { const x = L + i * bw; el('rect', {x: x + 3, y: y(v), width: bw - 6, height: Math.max(0, y(0) - y(v)), fill: css('--rain'), opacity: i === n - 1 ? 1 : .55}, svg); });
+  const pts = cur.o.map((v, i) => [L + i * bw + bw / 2, y(v)]);
+  el('polyline', {points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: css('--obs'), 'stroke-width': 2}, svg);
+  pts.forEach(p => el('circle', {cx: p[0], cy: p[1], r: 2.5, fill: css('--obs')}, svg));
+  el('text', {x: L + (n - 1) * bw + bw / 2, y: H - 10, 'text-anchor': 'middle', style: 'font-weight:600'}, svg).textContent = 'D';
+  el('text', {x: L + 0 * bw + bw / 2, y: H - 10, 'text-anchor': 'middle'}, svg).textContent = 'D-13';
+  el('text', {x: L + (n - 2) * bw + bw / 2, y: H - 10, 'text-anchor': 'middle'}, svg).textContent = 'D-1';
+  el('text', {x: L + (n - 3) * bw + bw / 2, y: H - 10, 'text-anchor': 'middle'}, svg).textContent = 'D-2';
+}
+$('reveal').onclick = () => {
+  $('outcome').textContent = cur.y ? 'The forecast failed.' : 'The forecast held.';
+  $('outcome').style.color = cur.y ? css('--bad') : css('--ok');
+};
+
+function stats() {
+  const t = +$('thr').value / 100; $('tlabel').textContent = Math.round(t * 100) + '%';
+  let tp = 0, fp = 0, fn = 0, tn = 0;
+  DATA.forEach(r => { const f = r.p >= t; if (f && r.y) tp++; else if (f) fp++; else if (r.y) fn++; else tn++; });
+  const pr = tp / Math.max(1, tp + fp), rc = tp / Math.max(1, tp + fn), fl = (tp + fp) / DATA.length;
+  const s = [[Math.round(rc * 100) + '%', 'of real failures caught'], [Math.round(pr * 100) + '%', 'of flagged days really failed'], [Math.round(fl * 100) + '%', 'of days flagged'], [fp + '', 'false alarms in ' + DATA.length + ' days']];
+  $('stats').innerHTML = s.map(x => '<div class="stat"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>').join('');
+}
+function calib() {
+  const svg = $('calib'); svg.replaceChildren();
+  const W = 560, H = 220, L = 34, R = 8, T = 10, B = 28, bins = [[0, .1], [.1, .2], [.2, .3], [.3, .4], [.4, .5], [.5, .7], [.7, 1.01]];
+  const y = v => T + (H - T - B) * (1 - v), bw = (W - L - R) / bins.length;
+  [0, .25, .5, .75, 1].forEach(v => { el('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: css('--line')}, svg); el('text', {x: L - 4, y: y(v) + 4, 'text-anchor': 'end'}, svg).textContent = Math.round(v * 100) + '%'; });
+  bins.forEach((b, i) => {
+    const m = DATA.filter(r => r.p >= b[0] && r.p < b[1]); if (!m.length) return;
+    const rate = m.filter(r => r.y).length / m.length, x = L + i * bw;
+    el('rect', {x: x + 6, y: y(rate), width: bw - 12, height: y(0) - y(rate), fill: css('--rain')}, svg);
+    const mid = m.reduce((a, r) => a + r.p, 0) / m.length;
+    el('line', {x1: x + 2, x2: x + bw - 2, y1: y(mid), y2: y(mid), stroke: css('--bad'), 'stroke-width': 2}, svg);
+    el('text', {x: x + bw / 2, y: H - 10, 'text-anchor': 'middle'}, svg).textContent = Math.round(b[0] * 100) + (b[1] > 1 ? '+' : '-' + Math.round(b[1] * 100)) + '% (' + m.length + ')';
+  });
+  el('text', {x: W - R, y: T + 8, 'text-anchor': 'end', style: 'fill:' + css('--bad')}, svg).textContent = 'orange mark = average predicted risk in the bin';
+}
+$('city').onchange = pickCity; $('day').oninput = draw; $('thr').oninput = stats;
+matchMedia('(prefers-color-scheme:dark)').onchange = () => { draw(); calib(); };
+pickCity(); stats(); calib();
+</script>

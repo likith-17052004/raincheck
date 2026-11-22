@@ -1,0 +1,32 @@
+{
+ "train failure frequency": {
+  "auroc": 0.5,
+  "ap": 0.2316468253968254,
+  "brier": 0.18499289770920924
+ },
+ "forecast magnitude only": {
+  "auroc": 0.7854504460292818,
+  "ap": 0.42109196359930445,
+  "brier": 0.20533861928673836
+ },
+ "logistic (with error history)": {
+  "auroc": 0.7489213874254718,
+  "ap": 0.4213293648587927,
+  "brier": 0.16111452358825804
+ },
+ "xgboost (with error history)": {
+  "auroc": 0.8096706723824032,
+  "ap": 0.48787434946801617,
+  "brier": 0.1421809047460556
+ },
+ "logistic (no error history)": {
+  "auroc": 0.7443069577250224,
+  "ap": 0.4184406119432745,
+  "brier": 0.16168086453157335
+ },
+ "xgboost (no error history)": {
+  "auroc": 0.8073123089704901,
+  "ap": 0.4856147036578742,
+  "brier": 0.14245963096618652
+ }
+}
