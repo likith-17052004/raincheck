@@ -8,6 +8,7 @@ day-ahead forecast will miss by more than max(5 mm, 50% of the forecast). It ans
 forecast is issued, before the rain is observed.
 
 - Demo: https://claude.ai/artifact/61fMmuQV294ZnqJrK7GPKz
+- Pitch deck: https://canva.link/d12fg3n7msh8epi
 - Code: https://github.com/likith-17052004/raincheck
 - TimeNet dataset PR: https://github.com/OpenTSLM/TimeNet/pull/846
 - Dataset id: `forecasttrust/india-rainfall-reliability` v1.0.0
