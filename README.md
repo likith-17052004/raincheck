@@ -1,8 +1,8 @@
-# ForecastTrust AI
+# RainCheck
 
 **Will tomorrow's rainfall forecast fail? Find out before the rain falls.**
 
-Weather apps show one rainfall number and no sign of how far to trust it. ForecastTrust AI reads the
+Weather apps show one rainfall number and no sign of how far to trust it. RainCheck reads the
 recent forecasts for a city and the rain that has been verified so far, and predicts whether the
 day-ahead forecast will miss by more than max(5 mm, 50% of the forecast). It answers on the day the
 forecast is issued, before the rain is observed.

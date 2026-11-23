@@ -1,4 +1,4 @@
-"""Fine-tune OpenTSLM-SP (frozen LLM + LoRA, trainable encoder and projector) on ForecastTrust.
+"""Fine-tune OpenTSLM-SP (frozen LLM + LoRA, trainable encoder and projector) on RainCheck.
 
 Samples come from the TimeNet dataset forecasttrust/india-rainfall-reliability with its stored
 chronological splits. The model answers "reliable" or "failure". The score used for AUROC, average
